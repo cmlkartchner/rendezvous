@@ -4,13 +4,15 @@ import matplotlib.pyplot as plt
 
 class Agent:
     def __init__(self, id, pos) -> None:
-        self.id = id
-        self.pos = pos
+        self.id = id # an int corresponding to its index in the adjacency matrix
+        self.pos = pos # a 2-dimensional vector representing its [x,y] position
+        self.neighbors = [] # a list containing the ids of all the agent's neighbors. Only used for limited communication network agents
 
-NUM_ITERS = 5
-NEIGHBOR_RADIUS = 5
+NUM_ITERS = 100
+NEIGHBOR_RADIUS = 3
 WORLD_SIZE = 5
-NUM_AGENTS = 3
+NUM_AGENTS = 10
+DT = 0.01
 
 def get_neighbors(agents, agent_x):
     neighbors = []
@@ -20,7 +22,8 @@ def get_neighbors(agents, agent_x):
                 neighbors.append(agent_j)
     return neighbors
 
-fig, ax = plt.subplots(figsize=(WORLD_SIZE, WORLD_SIZE))
+fig = plt.figure(figsize=(WORLD_SIZE, WORLD_SIZE), dpi=96)
+ax = plt.gca()
 
 def display(agents):
     agent_x = []
@@ -29,8 +32,10 @@ def display(agents):
         agent_x.append(agent.pos[0])
         agent_y.append(agent.pos[1])
     plt.cla()
-    ax.scatter(agent_x, agent_y)
-    plt.show()
+    plt.scatter(agent_x, agent_y)
+    ax.set(xlim=(0, WORLD_SIZE), ylim=(0, WORLD_SIZE))
+    ax.set_aspect('equal')
+    plt.pause(0.1)
 
 agents = []
 prev_state = dict()
@@ -45,32 +50,34 @@ def build_agents():
 
 def build_neighbor_matrix(): # randomize neighbors
     for i in range(0, NUM_AGENTS):
-        for j in range(0, NUM_AGENTS):
+        for j in range(i, NUM_AGENTS):
             if i != j:
-                neighbor_matrix[i][j] = np.random.choice([0, 1])
-                neighbor_matrix[j][i] = neighbor_matrix[i][j]
+                if np.random.choice([0, 1]) == 1:
+                    neighbor_matrix[i][j] = 1
+                    neighbor_matrix[j][i] = 1
+                    agents[i].neighbors.append(j)
+                    agents[j].neighbors.append(i)
+        print(agents[i].neighbors)
     print(neighbor_matrix)
 
 def main():
     build_agents()
-    # build_neighbor_matrix()
+    build_neighbor_matrix()
     for i in range(0, NUM_ITERS):
-        print("ITERATION: {iter}".format(iter=i))
+        # print("ITERATION: {iter}".format(iter=i))
         # update positions
         for agent in agents:
-            neighbors = get_neighbors(agents=agents, agent_x=agent)
-            dpos = np.zeros_like(agent.pos)
-            for neighbor in neighbors:
-                dpos += (prev_state.get(neighbor.id) - agent.pos) # (prev_state.get(neighbor.id) - agent.pos)
-            agent.pos += dpos
-            agent.pos[0] = agent.pos[0] % WORLD_SIZE
-            agent.pos[1] = agent.pos[1] % WORLD_SIZE
-            # agent.pos = agent.pos % WORLD_SIZE # constrain it to a world size
-            print("Agent {id}: {pos}".format(id=agent.id, pos=agent.pos))
-
-        for agent in agents:
             prev_state.update({agent.id: agent.pos})
+            # neighbors = get_neighbors(agents=agents, agent_x=agent)
+            dpos = np.zeros_like(agent.pos)
+            for neighbor in agent.neighbors:
+                dpos += (prev_state.get(neighbor) - agent.pos)
+            agent.pos = agent.pos + dpos * DT
+            agent.pos[0] = agent.pos[0] % WORLD_SIZE # makes the agents loop back around the world if they go out of bounds
+            agent.pos[1] = agent.pos[1] % WORLD_SIZE
+            # print("Agent {id}: {pos}".format(id=agent.id, pos=agent.pos))
 
-        # display(agents)
+        display(agents)
+    plt.show()
 
 main()
