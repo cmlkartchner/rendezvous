@@ -8,6 +8,9 @@ class Agent:
         self.pos = pos # a 2-dimensional vector representing its [x,y] position
         self.neighbors = [] # a list containing the ids of all the agent's neighbors. Only used for limited communication network agents
         self.num_neighbors = 0 # also known as the degree of the node in graph form
+        """By having the agent store the same info as the graph laplacian,
+            we have a faster empirical big-O, but it makes storing the graph laplacian
+            a little useless."""
 
 NUM_ITERS = 100
 NEIGHBOR_RADIUS = 3
@@ -39,8 +42,8 @@ def display(agents):
     plt.pause(0.1)
 
 agents = []
-prev_state = dict()
-neighbor_matrix = np.zeros((NUM_AGENTS, NUM_AGENTS))
+prev_state = dict() # maps agent id to their position before update
+neighbor_matrix = np.zeros((NUM_AGENTS, NUM_AGENTS)) # the negated graph laplacian, here purely for visualization.
 
 def build_agents():
     for i in range(0, NUM_AGENTS):
@@ -73,10 +76,9 @@ def main():
         # update positions
         for agent in agents:
             prev_state.update({agent.id: agent.pos})
-            # TODO: change the calculation of velocity to use the graph laplacian
-            velocity = np.zeros_like(agent.pos)
+            velocity = -1 * agent.num_neighbors * agent.pos
             for neighbor in agent.neighbors:
-                velocity += (prev_state.get(neighbor) - agent.pos)
+                velocity += prev_state.get(neighbor)
             agent.pos = agent.pos + velocity * DT
             agent.pos[0] = agent.pos[0] % WORLD_SIZE # makes the agents loop back around the world if they go out of bounds
             agent.pos[1] = agent.pos[1] % WORLD_SIZE
