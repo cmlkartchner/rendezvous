@@ -7,6 +7,7 @@ class Agent:
         self.id = id # an int corresponding to its index in the adjacency matrix
         self.pos = pos # a 2-dimensional vector representing its [x,y] position
         self.neighbors = [] # a list containing the ids of all the agent's neighbors. Only used for limited communication network agents
+        self.num_neighbors = 0 # also known as the degree of the node in graph form
 
 NUM_ITERS = 100
 NEIGHBOR_RADIUS = 3
@@ -43,11 +44,12 @@ neighbor_matrix = np.zeros((NUM_AGENTS, NUM_AGENTS))
 
 def build_agents():
     for i in range(0, NUM_AGENTS):
-        pos = np.array([np.random.randint(0, WORLD_SIZE), np.random.randint(0, WORLD_SIZE)]) # np.random.randint(0, WORLD_SIZE)
+        pos = np.array([np.random.randint(0, WORLD_SIZE), np.random.randint(0, WORLD_SIZE)])
         agents.append(Agent(i, pos))
         prev_state.update({i: pos})
-        print("Agent {id}: {pos}\n".format(id=i, pos=pos))
+        # print("Agent {id}: {pos}\n".format(id=i, pos=pos))
 
+"""Builds the graph laplacian with the signs flipped (-L)"""
 def build_neighbor_matrix(): # randomize neighbors
     for i in range(0, NUM_AGENTS):
         for j in range(i, NUM_AGENTS):
@@ -57,7 +59,10 @@ def build_neighbor_matrix(): # randomize neighbors
                     neighbor_matrix[j][i] = 1
                     agents[i].neighbors.append(j)
                     agents[j].neighbors.append(i)
+                    agents[i].num_neighbors += 1
+                    agents[j].num_neighbors += 1
         print(agents[i].neighbors)
+        neighbor_matrix[i][i] = -1 * agents[i].num_neighbors
     print(neighbor_matrix)
 
 def main():
@@ -68,11 +73,11 @@ def main():
         # update positions
         for agent in agents:
             prev_state.update({agent.id: agent.pos})
-            # neighbors = get_neighbors(agents=agents, agent_x=agent)
-            dpos = np.zeros_like(agent.pos)
+            # TODO: change the calculation of velocity to use the graph laplacian
+            velocity = np.zeros_like(agent.pos)
             for neighbor in agent.neighbors:
-                dpos += (prev_state.get(neighbor) - agent.pos)
-            agent.pos = agent.pos + dpos * DT
+                velocity += (prev_state.get(neighbor) - agent.pos)
+            agent.pos = agent.pos + velocity * DT
             agent.pos[0] = agent.pos[0] % WORLD_SIZE # makes the agents loop back around the world if they go out of bounds
             agent.pos[1] = agent.pos[1] % WORLD_SIZE
             # print("Agent {id}: {pos}".format(id=agent.id, pos=agent.pos))
